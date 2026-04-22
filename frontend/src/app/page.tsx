@@ -40,6 +40,12 @@ import {
   Database,
   Zap,
 } from "lucide-react";
+import dynamic from "next/dynamic";
+
+const ParticleTorus = dynamic(
+  () => import("@/components/3d/ParticleTorus"),
+  { ssr: false }
+);
 
 export default function HomePage() {
   return (
@@ -94,8 +100,11 @@ function DiscoverSection() {
   return (
     <section id="discover" className="min-h-screen flex flex-col">
       {/* Hero Area */}
-      <div className="flex-1 flex flex-col justify-center px-6 py-20 lg:py-32">
-        <div className="max-w-7xl mx-auto w-full">
+      <div className="flex-1 flex flex-col justify-center px-6 py-20 lg:py-32 relative overflow-hidden">
+        {/* 3D Particle Background */}
+        <ParticleTorus />
+        
+        <div className="max-w-7xl mx-auto w-full relative z-10">
           <div className="max-w-3xl">
             {/* Tagline with line */}
             <div className="flex items-center gap-4 mb-8">
