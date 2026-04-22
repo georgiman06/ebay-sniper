@@ -4,7 +4,7 @@ import { useParts } from "@/hooks/useParts";
 import { PartTable } from "@/components/parts/PartTable";
 import { AddPartModal } from "@/components/parts/AddPartModal";
 import { Part } from "@/lib/types";
-import { Plus } from "lucide-react";
+import { Plus, Database, Package } from "lucide-react";
 
 export default function PartsPage() {
   const { parts, isLoading, mutate } = useParts();
@@ -21,29 +21,59 @@ export default function PartsPage() {
     setModalOpen(true);
   }
 
+  const activeParts = parts.filter(p => p.is_active).length;
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Part Manager</h1>
-          <p className="text-sm text-slate-400 mt-0.5">
-            {parts.length} tracked part{parts.length !== 1 ? "s" : ""}
+          <div className="flex items-center gap-2 mb-2">
+            <Database className="h-4 w-4 text-primary" />
+            <span className="text-xs font-semibold uppercase tracking-widest text-primary">
+              Part Tracker
+            </span>
+          </div>
+          <h1 className="text-4xl font-bold text-foreground tracking-tight">
+            Manage Parts
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            {parts.length} parts tracked, {activeParts} currently active
           </p>
         </div>
         <button
           id="add-part-btn"
           onClick={openAdd}
-          className="flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors shadow-lg shadow-violet-900/30"
+          className="flex items-center gap-2.5 rounded-xl bg-primary hover:bg-primary/90 px-5 py-3 text-sm font-semibold text-primary-foreground transition-all shadow-lg shadow-primary/20"
         >
-          <Plus size={15} /> Add Part
+          <Plus className="h-4 w-4" />
+          Add Part
         </button>
       </div>
 
+      {/* Content */}
       {isLoading ? (
-        <div className="py-20 text-center text-slate-500 text-sm">Loading parts…</div>
+        <div className="rounded-2xl border border-border bg-card p-16">
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary border border-border animate-pulse">
+              <Package className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="text-sm text-muted-foreground">Loading parts...</p>
+          </div>
+        </div>
       ) : parts.length === 0 ? (
-        <div className="py-20 text-center text-slate-500 text-sm">
-          No parts yet. Click <strong className="text-slate-300">Add Part</strong> to get started.
+        <div className="rounded-2xl border border-border bg-card p-16">
+          <div className="flex flex-col items-center justify-center gap-4">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary border border-border">
+              <Package className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">No parts tracked yet</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Click <span className="text-primary font-medium">Add Part</span> to start tracking deals
+              </p>
+            </div>
+          </div>
         </div>
       ) : (
         <PartTable parts={parts} onRefresh={mutate} onEdit={openEdit} />
