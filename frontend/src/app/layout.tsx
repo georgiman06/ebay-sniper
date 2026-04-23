@@ -1,53 +1,70 @@
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Link from "next/link";
-import { Crosshair } from "lucide-react";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "eBay Sniper — Deal Finder",
-  description: "Real-time eBay deal scanner and margin tracker for resellers.",
+  title: "SNIPER - eBay Deal Finder",
+  description: "Automated eBay deal scanner. Find profitable listings instantly.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
-      <body className="min-h-screen bg-slate-950 text-slate-100 antialiased">
-        {/* Nav */}
-        <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/80 backdrop-blur-md">
-          <div className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-3">
-            <Link href="/" id="nav-logo" className="flex items-center gap-2 font-bold text-white">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-600 text-white">
-                <Crosshair size={15} />
+    <html lang="en" className="bg-background">
+      <body className="min-h-screen bg-background text-foreground antialiased">
+        {/* Navigation - COMPUTE style */}
+        <header className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-1.5">
+              <span className="text-xl font-semibold tracking-tight text-foreground">
+                SNIPER
               </span>
-              <span className="text-base tracking-tight">
-                eBay <span className="text-violet-400">Sniper</span>
+              <span className="text-[10px] font-medium text-muted-foreground tracking-wider mt-1">
+                TM
               </span>
             </Link>
-            <nav className="flex gap-1">
-              <NavLink href="/" label="Dashboard" id="nav-dashboard" />
-              <NavLink href="/discover" label="Discover" id="nav-discover" />
-              <NavLink href="/parts" label="Parts" id="nav-parts" />
+
+            {/* Center Navigation */}
+            <nav className="hidden md:flex items-center gap-8">
+              <NavLink href="/#discover">Discover</NavLink>
+              <NavLink href="/#dashboard">Dashboard</NavLink>
+              <NavLink href="/#parts">Parts</NavLink>
+              <NavLink href="/#history">History</NavLink>
             </nav>
+
+            {/* CTA Button */}
+            <div className="flex items-center gap-4">
+              <span className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground">
+                <span className="flex h-2 w-2 rounded-full bg-primary pulse-glow" />
+                Live
+              </span>
+              <Link
+                href="/#discover"
+                className="rounded-full bg-foreground px-5 py-2 text-sm font-medium text-background hover:bg-foreground/90 transition-colors"
+              >
+                Start scanning
+              </Link>
+            </div>
           </div>
         </header>
 
-        <main className="mx-auto max-w-7xl px-4 py-8">{children}</main>
+        <main className="pt-[73px]">{children}</main>
       </body>
     </html>
   );
 }
 
-function NavLink({ href, label, id }: { href: string; label: string; id: string }) {
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
     <Link
-      id={id}
       href={href}
-      className="rounded-lg px-3 py-1.5 text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+      className="text-sm text-muted-foreground hover:text-foreground transition-colors"
     >
-      {label}
+      {children}
     </Link>
   );
 }

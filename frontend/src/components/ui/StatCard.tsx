@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { classNames } from "@/lib/utils";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 interface StatCardProps {
   label: string;
@@ -10,27 +10,35 @@ interface StatCardProps {
 }
 
 export function StatCard({ label, value, sub, icon, trend }: StatCardProps) {
-  const trendColor =
-    trend === "up"
-      ? "text-emerald-400"
-      : trend === "down"
-      ? "text-rose-400"
-      : "text-slate-400";
-
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-800/60 backdrop-blur-sm p-5 flex flex-col gap-2 shadow-lg">
-      {/* Glow accent */}
-      <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-violet-600/10 blur-2xl pointer-events-none" />
+    <div className="rounded-2xl border border-border bg-card p-5 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <span className="text-xs font-semibold uppercase tracking-widest text-slate-400">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {label}
         </span>
-        {icon && <span className="text-slate-500">{icon}</span>}
+        {icon && <span className="text-muted-foreground">{icon}</span>}
       </div>
-      <p className="text-3xl font-bold text-white leading-none">{value}</p>
-      {sub && (
-        <p className={classNames("text-xs font-medium", trendColor)}>{sub}</p>
-      )}
+      <div className="flex items-end gap-2">
+        <span className="text-3xl font-semibold text-foreground tracking-tight">
+          {value}
+        </span>
+        {trend && (
+          <span
+            className={`flex items-center pb-1 ${
+              trend === "up"
+                ? "text-primary"
+                : trend === "down"
+                ? "text-danger"
+                : "text-muted-foreground"
+            }`}
+          >
+            {trend === "up" && <TrendingUp className="h-4 w-4" />}
+            {trend === "down" && <TrendingDown className="h-4 w-4" />}
+            {trend === "neutral" && <Minus className="h-4 w-4" />}
+          </span>
+        )}
+      </div>
+      {sub && <span className="text-xs text-muted-foreground">{sub}</span>}
     </div>
   );
 }

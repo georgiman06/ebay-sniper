@@ -1,8 +1,8 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Part, PartCreate, PartUpdate } from "@/lib/types";
 import { createPart, updatePart } from "@/lib/api";
-import { X } from "lucide-react";
+import { X, Package, Loader2 } from "lucide-react";
 
 interface AddPartModalProps {
   open: boolean;
@@ -14,13 +14,33 @@ interface AddPartModalProps {
 export function AddPartModal({ open, onClose, onSaved, editing }: AddPartModalProps) {
   const isEdit = !!editing;
   const [form, setForm] = useState<PartCreate>({
-    name: editing?.name ?? "",
-    category: editing?.category ?? "",
-    search_query: editing?.search_query ?? "",
-    target_margin_override: editing?.target_margin_override ?? null,
+    name: "",
+    category: "",
+    search_query: "",
+    target_margin_override: null,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Reset form when editing changes
+  useEffect(() => {
+    if (editing) {
+      setForm({
+        name: editing.name,
+        category: editing.category,
+        search_query: editing.search_query,
+        target_margin_override: editing.target_margin_override,
+      });
+    } else {
+      setForm({
+        name: "",
+        category: "",
+        search_query: "",
+        target_margin_override: null,
+      });
+    }
+    setError(null);
+  }, [editing, open]);
 
   if (!open) return null;
 
@@ -49,18 +69,35 @@ export function AddPartModal({ open, onClose, onSaved, editing }: AddPartModalPr
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-md rounded-2xl border border-slate-700/60 bg-slate-800 shadow-2xl shadow-black/50 p-6">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold text-white">
-            {isEdit ? "Edit Part" : "Add Part"}
-          </h2>
-          <button id="close-modal" onClick={onClose} className="text-slate-400 hover:text-white transition-colors">
-            <X size={20} />
+      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      
+      <div className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl shadow-black/50">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-5 border-b border-border">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/20">
+              <Package className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">
+                {isEdit ? "Edit Part" : "Add Part"}
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                {isEdit ? "Update tracking settings" : "Track a new eBay product"}
+              </p>
+            </div>
+          </div>
+          <button 
+            id="close-modal" 
+            onClick={onClose} 
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-all"
+          >
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-5">
           {!isEdit && (
             <>
               <Field label="Part Name" id="part-name" required>
@@ -85,20 +122,20 @@ export function AddPartModal({ open, onClose, onSaved, editing }: AddPartModalPr
                   className={inputCls}
                 />
               </Field>
-              <Field label="eBay Search Query" id="part-query" required>
+              <Field label="eBay Search Query" id="part-query" required hint="Use quotes for exact match, -keyword to exclude">
                 <input
                   id="part-query"
                   type="text"
                   value={form.search_query}
                   onChange={(e) => setForm({ ...form, search_query: e.target.value })}
                   required
-                  placeholder='e.g. "Dell XPS 15 9500 battery" -charger'
+                  placeholder='"Dell XPS 15 9500 battery" -charger'
                   className={inputCls}
                 />
               </Field>
             </>
           )}
-          <Field label="Target Margin Override (%)" id="part-margin">
+          <Field label="Target Margin Override (%)" id="part-margin" hint="Leave blank to use default (30%)">
             <input
               id="part-margin"
               type="number"
@@ -112,15 +149,15 @@ export function AddPartModal({ open, onClose, onSaved, editing }: AddPartModalPr
                   target_margin_override: e.target.value === "" ? null : Number(e.target.value) / 100,
                 })
               }
-              placeholder="Leave blank to use global default (30%)"
+              placeholder="30"
               className={inputCls}
             />
           </Field>
 
           {error && (
-            <p className="text-xs text-rose-400 rounded-lg bg-rose-500/10 border border-rose-500/30 p-2">
+            <div className="text-xs text-danger rounded-xl bg-danger/5 border border-danger/20 p-3">
               {error}
-            </p>
+            </div>
           )}
 
           <div className="flex gap-3 mt-2">
@@ -128,7 +165,7 @@ export function AddPartModal({ open, onClose, onSaved, editing }: AddPartModalPr
               type="button"
               id="cancel-part"
               onClick={onClose}
-              className="flex-1 rounded-xl border border-slate-600 bg-slate-700/40 px-4 py-2.5 text-sm font-medium text-slate-300 hover:bg-slate-700 transition-colors"
+              className="flex-1 rounded-xl border border-border bg-secondary px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary/80 transition-all"
             >
               Cancel
             </button>
@@ -136,9 +173,16 @@ export function AddPartModal({ open, onClose, onSaved, editing }: AddPartModalPr
               type="submit"
               id="save-part"
               disabled={saving}
-              className="flex-1 rounded-xl bg-violet-600 hover:bg-violet-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors disabled:opacity-60"
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary hover:bg-primary/90 px-4 py-3 text-sm font-semibold text-primary-foreground transition-all disabled:opacity-60"
             >
-              {saving ? "Saving…" : isEdit ? "Save Changes" : "Add Part"}
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                isEdit ? "Save Changes" : "Add Part"
+              )}
             </button>
           </div>
         </form>
@@ -147,16 +191,17 @@ export function AddPartModal({ open, onClose, onSaved, editing }: AddPartModalPr
   );
 }
 
-function Field({ label, id, required, children }: { label: string; id: string; required?: boolean; children: React.ReactNode }) {
+function Field({ label, id, required, hint, children }: { label: string; id: string; required?: boolean; hint?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-        {label} {required && <span className="text-violet-400">*</span>}
+    <div className="flex flex-col gap-2">
+      <label htmlFor={id} className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+        {label} {required && <span className="text-primary">*</span>}
       </label>
       {children}
+      {hint && <p className="text-[10px] text-muted-foreground/70">{hint}</p>}
     </div>
   );
 }
 
 const inputCls =
-  "w-full rounded-xl border border-slate-600/60 bg-slate-700/50 px-3.5 py-2.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/40 transition-colors";
+  "w-full rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/20 transition-all";

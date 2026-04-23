@@ -6,23 +6,28 @@ interface MarginSliderProps {
 }
 
 export function MarginSlider({ value, onChange }: MarginSliderProps) {
+  const percentage = Math.round(value * 100);
+
   return (
     <div className="flex items-center gap-4">
-      <span className="text-xs font-semibold uppercase tracking-widest text-slate-400 whitespace-nowrap">
-        Min Margin
-      </span>
+      <label
+        htmlFor="margin-slider"
+        className="text-sm text-muted-foreground whitespace-nowrap"
+      >
+        Min margin
+      </label>
       <input
         id="margin-slider"
         type="range"
         min={0}
         max={60}
         step={1}
-        value={Math.round(value * 100)}
+        value={percentage}
         onChange={(e) => onChange(Number(e.target.value) / 100)}
-        className="w-36 accent-violet-500"
+        className="w-32 h-1.5 bg-muted rounded-full appearance-none cursor-pointer accent-primary"
       />
-      <span className="w-12 text-right text-sm font-bold text-violet-300">
-        {Math.round(value * 100)}%
+      <span className="text-sm font-medium text-foreground w-10 text-right tabular-nums">
+        {percentage}%
       </span>
     </div>
   );
