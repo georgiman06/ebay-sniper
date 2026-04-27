@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 
 class Settings(BaseSettings):
     ebay_client_id: str
@@ -8,8 +9,17 @@ class Settings(BaseSettings):
     ebay_browse_api_url: str
     ebay_finding_api_url: str
     database_url: str
+    cors_origins: str = "http://localhost:3000"
     global_default_margin: float = 0.30
     token_cache_buffer_seconds: int = 60
+
+    @field_validator("database_url")
+    @classmethod
+    def fix_db_scheme(cls, v: str) -> str:
+        # Railway Postgres provides postgresql:// but asyncpg requires postgresql+asyncpg://
+        if v.startswith("postgresql://") or v.startswith("postgres://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1).replace("postgres://", "postgresql+asyncpg://", 1)
+        return v
 
     class Config:
         env_file = ".env"
