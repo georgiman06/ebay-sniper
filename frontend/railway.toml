@@ -4,7 +4,6 @@ dockerfilePath = "Dockerfile"
 buildArgs = { NEXT_PUBLIC_API_URL = "https://${{backend.RAILWAY_PUBLIC_DOMAIN}}/api/v1" }
 
 [deploy]
-startCommand = "node server.js"
 healthcheckPath = "/"
 healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
