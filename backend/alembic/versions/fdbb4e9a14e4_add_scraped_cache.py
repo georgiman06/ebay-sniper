@@ -37,13 +37,13 @@ def upgrade() -> None:
     op.create_index(op.f('ix_scraped_sold_listings_scraped_at'), 'scraped_sold_listings', ['scraped_at'], unique=False)
     op.create_index(op.f('ix_scraped_sold_listings_search_query'), 'scraped_sold_listings', ['search_query'], unique=False)
 
-    op.drop_index('ix_active_listings_fetched_at', table_name='active_listings')
-    op.drop_index('ix_active_listings_part_id', table_name='active_listings')
-    op.drop_table('active_listings')
-    op.drop_index('ix_sold_listings_part_id', table_name='sold_listings')
-    op.drop_index('ix_sold_listings_sold_date', table_name='sold_listings')
-    op.drop_index('ix_sold_part_date_clean', table_name='sold_listings')
-    op.drop_table('sold_listings')
+    op.execute('DROP INDEX IF EXISTS ix_active_listings_fetched_at')
+    op.execute('DROP INDEX IF EXISTS ix_active_listings_part_id')
+    op.execute('DROP TABLE IF EXISTS active_listings')
+    op.execute('DROP INDEX IF EXISTS ix_sold_listings_part_id')
+    op.execute('DROP INDEX IF EXISTS ix_sold_listings_sold_date')
+    op.execute('DROP INDEX IF EXISTS ix_sold_part_date_clean')
+    op.execute('DROP TABLE IF EXISTS sold_listings')
     # ### end Alembic commands ###
 
 
