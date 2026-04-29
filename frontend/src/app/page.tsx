@@ -39,10 +39,6 @@ import {
   Plus,
   Database,
   Zap,
-  BarChart2,
-  Filter,
-  Calculator,
-  ShieldCheck,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 
@@ -57,7 +53,6 @@ export default function HomePage() {
       <DiscoverSection />
       <DashboardSection />
       <PartsSection />
-      <MethodologySection />
     </div>
   );
 }
@@ -621,111 +616,6 @@ function PartsSection() {
           onSaved={mutate}
           editing={editing}
         />
-      </div>
-    </section>
-  );
-}
-
-// ============================================
-// METHODOLOGY SECTION
-// ============================================
-function MethodologySection() {
-  const steps = [
-    {
-      icon: <Search className="h-5 w-5" />,
-      label: "1. Fetch sold listings",
-      detail: "Query eBay's Finding API for recently sold items matching your search term. We pull up to 100 completed sales with shipping costs included.",
-      tag: "eBay Finding API",
-    },
-    {
-      icon: <Filter className="h-5 w-5" />,
-      label: "2. Title filtering",
-      detail: 'Listings containing "lot of", "bundle", "for parts", "not working", "as-is", or multi-unit patterns (e.g. "2x") are flagged as outliers and excluded.',
-      tag: "Pattern exclusion",
-    },
-    {
-      icon: <ShieldCheck className="h-5 w-5" />,
-      label: "3. Strict query matching",
-      detail: "Every token in your search query must appear in the listing title. A search for '1 TB SSD' won't include listings that only mention 'SSD' — all keywords must match.",
-      tag: "Mandatory token check",
-    },
-    {
-      icon: <BarChart2 className="h-5 w-5" />,
-      label: "4. IQR outlier removal",
-      detail: "We compute Q1, Q3, and IQR on the remaining prices. Any price outside [Q1 − 1.5×IQR, Q3 + 1.5×IQR] is flagged as a statistical outlier and dropped from the average.",
-      tag: "IQR method",
-    },
-    {
-      icon: <Calculator className="h-5 w-5" />,
-      label: "5. Compute average & max buy",
-      detail: "The mean of surviving prices becomes the Average Sold Price. Max Buy Price = Avg × (1 − target margin). At the default 30% margin: Max Buy = Avg × 0.70.",
-      tag: "Final calculation",
-    },
-  ];
-
-  return (
-    <section id="methodology" className="py-20 px-6 border-t border-border">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-10">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="tagline-line" />
-            <span className="text-sm text-muted-foreground tracking-wide">
-              Transparent pricing engine
-            </span>
-          </div>
-          <h2 className="text-4xl sm:text-5xl font-semibold text-foreground tracking-tight">
-            How we calculate cost
-          </h2>
-          <p className="text-muted-foreground mt-3 max-w-xl">
-            Every average price you see goes through five stages of cleaning before we trust it.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {steps.map((step, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-border bg-card p-6 flex flex-col gap-4"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 text-primary flex-shrink-0">
-                  {step.icon}
-                </div>
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-muted text-muted-foreground border border-border whitespace-nowrap">
-                  {step.tag}
-                </span>
-              </div>
-              <div>
-                <div className="font-medium text-foreground mb-1.5">{step.label}</div>
-                <p className="text-sm text-muted-foreground leading-relaxed">{step.detail}</p>
-              </div>
-            </div>
-          ))}
-
-          {/* Formula card */}
-          <div className="rounded-2xl border border-primary/30 bg-primary/5 p-6 flex flex-col gap-4 md:col-span-2 lg:col-span-1">
-            <div className="flex items-center justify-center h-10 w-10 rounded-xl bg-primary/10 text-primary flex-shrink-0">
-              <DollarSign className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="font-medium text-foreground mb-3">The formula</div>
-              <div className="flex flex-col gap-2 font-mono text-sm">
-                <div className="px-4 py-2.5 rounded-xl bg-card border border-border text-foreground">
-                  avg = mean(clean prices)
-                </div>
-                <div className="px-4 py-2.5 rounded-xl bg-card border border-border text-foreground">
-                  max_buy = avg × (1 − margin)
-                </div>
-                <div className="px-4 py-2.5 rounded-xl bg-primary/10 border border-primary/30 text-primary">
-                  profit = avg − max_buy
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                Default margin is 30%. Override per-part in the Parts section.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );
