@@ -15,9 +15,10 @@ GET  /search/suggestions                → Instagram-style "track these too"
 GET  /search/history                    → what the user has searched
 """
 import logging
-from fastapi import APIRouter, Depends, Query, HTTPException
+from fastapi import APIRouter, Depends, Query, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from app.limiter import limiter
 
 from app.database import get_db
 from app.models.part import TrackedPart
@@ -33,9 +34,11 @@ router = APIRouter(tags=["Search"])
 
 
 @router.get("/search/preview")
+@limiter.limit("10/minute")
 async def preview_search(
-    q: str = Query(..., min_length=2, description="Part name e.g. 'RTX 3080'"),
-    condition: str = Query("working", description="working, parts, or new"),
+    request: Request,
+    q: str = Query(..., min_length=2, max_length=100, description="Part name e.g. 'RTX 3080'"),
+    condition: str = Query("working", pattern="^(working|parts|new)$", description="working, parts, or new"),
 ):
     """
     Live preview of sold data for a query.
@@ -100,9 +103,9 @@ async def preview_search(
 
 @router.post("/search/add")
 async def add_to_tracker(
-    q: str = Query(..., description="Raw query from the user"),
-    name: str = Query(..., description="Display name e.g. 'NVIDIA RTX 3080'"),
-    category: str = Query(..., description="Category e.g. 'GPUs'"),
+    q: str = Query(..., min_length=2, max_length=100, description="Raw query from the user"),
+    name: str = Query(..., min_length=2, max_length=120, description="Display name e.g. 'NVIDIA RTX 3080'"),
+    category: str = Query(..., min_length=2, max_length=60, description="Category e.g. 'GPUs'"),
     db: AsyncSession = Depends(get_db),
 ):
     """
@@ -183,7 +186,7 @@ async def get_smart_suggestions(
 
 @router.get("/search/history")
 async def get_search_history(
-    limit: int = Query(20),
+    limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db),
 ):
     """Returns the user's search history, most recent first."""
@@ -197,8 +200,8 @@ async def get_search_history(
 
 @router.post("/search/record")
 async def record_search_event(
-    q: str     = Query(...),
-    category: str = Query(None),
+    q: str = Query(..., min_length=2, max_length=100),
+    category: str = Query(None, max_length=60),
     db: AsyncSession = Depends(get_db),
 ):
     """

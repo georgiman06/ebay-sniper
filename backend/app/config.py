@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     ebay_browse_api_url: str
     ebay_finding_api_url: str
     database_url: str
+    api_key: str
+    sentry_dsn: str = ""
     cors_origins: str = "http://localhost:3000"
     global_default_margin: float = 0.30
     token_cache_buffer_seconds: int = 60
