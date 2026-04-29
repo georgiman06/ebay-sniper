@@ -1,3 +1,4 @@
+import asyncio
 import sentry_sdk
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,13 +51,7 @@ app.include_router(health.router,   prefix="/api/v1")
 app.include_router(search.router,     prefix="/api/v1")
 app.include_router(discovery.router,  prefix="/api/v1")
 
-@app.on_event("startup")
-async def startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    start_scheduler()
-    logger.info("App started.")
-    # Refresh any parts not updated in the last 6 hours (catches missed scheduler jobs after restarts)
+async def _startup_refresh():
     from datetime import datetime, timezone, timedelta
     from app.services.refresh_service import refresh_all_parts
     from app.database import AsyncSessionLocal
@@ -75,6 +70,15 @@ async def startup():
             logger.info("Startup: %d stale parts detected, triggering refresh.", len(stale))
             await refresh_all_parts(db)
             await db.commit()
+
+
+@app.on_event("startup")
+async def startup():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    start_scheduler()
+    logger.info("App started.")
+    asyncio.create_task(_startup_refresh())
 
 @app.on_event("shutdown")
 async def shutdown():
