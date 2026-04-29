@@ -2,8 +2,8 @@ from pydantic_settings import BaseSettings
 from pydantic import field_validator
 
 class Settings(BaseSettings):
-    ebay_client_id: str
-    ebay_client_secret: str
+    ebay_client_id: str = ""
+    ebay_client_secret: str = ""
     ebay_marketplace_id: str = "EBAY_US"
     ebay_auth_url: str
     ebay_browse_api_url: str
