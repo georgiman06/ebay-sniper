@@ -33,7 +33,7 @@ if settings.sentry_dsn:
         send_default_pii=False,
     )
 
-app = FastAPI(title="eBay Deal Finder", version="0.2.0", dependencies=[Depends(verify_api_key)])
+app = FastAPI(title="eBay Deal Finder", version="0.2.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -44,12 +44,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(parts.router,    prefix="/api/v1")
-app.include_router(refresh.router,  prefix="/api/v1")
-app.include_router(listings.router, prefix="/api/v1")
-app.include_router(health.router,   prefix="/api/v1")
-app.include_router(search.router,     prefix="/api/v1")
-app.include_router(discovery.router,  prefix="/api/v1")
+_auth = [Depends(verify_api_key)]
+app.include_router(health.router,     prefix="/api/v1")
+app.include_router(parts.router,      prefix="/api/v1", dependencies=_auth)
+app.include_router(refresh.router,    prefix="/api/v1", dependencies=_auth)
+app.include_router(listings.router,   prefix="/api/v1", dependencies=_auth)
+app.include_router(search.router,     prefix="/api/v1", dependencies=_auth)
+app.include_router(discovery.router,  prefix="/api/v1", dependencies=_auth)
 
 async def _startup_refresh():
     from datetime import datetime, timezone, timedelta

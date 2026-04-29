@@ -9,6 +9,10 @@ from app.services.ebay_auth import get_access_token
 
 router = APIRouter()
 
+@router.get("/health")
+async def health():
+    return {"status": "ok"}
+
 @router.get("/health/ebay-auth")
 async def test_ebay_auth():
     try:
