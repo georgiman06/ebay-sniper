@@ -37,13 +37,13 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_search_history_clean_query'), 'search_history', ['clean_query'], unique=False)
     op.create_index(op.f('ix_search_history_last_searched_at'), 'search_history', ['last_searched_at'], unique=False)
-    op.drop_index('ix_sold_listings_part_id', table_name='sold_listings')
-    op.drop_index('ix_sold_listings_sold_date', table_name='sold_listings')
-    op.drop_index('ix_sold_part_date_clean', table_name='sold_listings')
-    op.drop_table('sold_listings')
-    op.drop_index('ix_active_listings_fetched_at', table_name='active_listings')
-    op.drop_index('ix_active_listings_part_id', table_name='active_listings')
-    op.drop_table('active_listings')
+    op.drop_index('ix_sold_listings_part_id', table_name='sold_listings', if_exists=True)
+    op.drop_index('ix_sold_listings_sold_date', table_name='sold_listings', if_exists=True)
+    op.drop_index('ix_sold_part_date_clean', table_name='sold_listings', if_exists=True)
+    op.drop_table('sold_listings', if_exists=True)
+    op.drop_index('ix_active_listings_fetched_at', table_name='active_listings', if_exists=True)
+    op.drop_index('ix_active_listings_part_id', table_name='active_listings', if_exists=True)
+    op.drop_table('active_listings', if_exists=True)
     # ### end Alembic commands ###
 
 
