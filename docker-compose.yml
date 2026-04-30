@@ -24,6 +24,9 @@ services:
     volumes:
       - ./backend:/app
     env_file: ./backend/.env
+    environment:
+      # Override DATABASE_URL so the backend reaches the postgres container by service name
+      - DATABASE_URL=postgresql://user:password@postgres:5432/ebay_deal_finder
     depends_on:
       postgres:
         condition: service_healthy
@@ -34,7 +37,10 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost:8000/api/v1
+      # Inside Docker, containers talk via service name, not localhost
+      - NEXT_PUBLIC_API_URL=http://backend:8000/api/v1
+      # Must match API_KEY in backend/.env
+      - NEXT_PUBLIC_API_KEY=change-me-to-a-strong-random-secret
     depends_on:
       - backend
 
