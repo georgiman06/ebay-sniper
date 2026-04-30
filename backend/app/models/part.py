@@ -12,7 +12,7 @@ class TrackedPart(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name            = Column(String(255), nullable=False)          # "RTX 3080"
     category        = Column(String(100), nullable=False)          # "GPU", "CPU", "RAM"
-    search_query    = Column(Text, nullable=False)                  # eBay boolean search string
+    search_query    = Column(Text, nullable=False, unique=True)     # eBay boolean search string
                                                                     # e.g. '(RTX 3080) -"for parts" -broken -faulty'
     is_active       = Column(Boolean, default=True, nullable=False)
     

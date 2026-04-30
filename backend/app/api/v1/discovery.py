@@ -1,4 +1,9 @@
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+from app.database import get_db
+from app.models.part import TrackedPart
 from app.services.discovery_service import (
     discover_trending,
     discover_by_category,
@@ -36,3 +41,34 @@ async def parts_by_keyword(
 ):
     """Discovers part candidates matching a keyword."""
     return await discover_by_keyword(q)
+
+
+@router.post("/discovery/import/trending")
+async def import_trending_parts(db: AsyncSession = Depends(get_db)):
+    """
+    Discovers trending parts and saves them to the DB.
+    Skips duplicates by search_query. Use this to bootstrap the app.
+    """
+    candidates = await discover_trending()
+
+    inserted = 0
+    skipped = 0
+    for c in candidates:
+        stmt = (
+            pg_insert(TrackedPart)
+            .values(
+                name=c["name"],
+                category=c["category"],
+                search_query=c["search_query"],
+                target_margin_override=c.get("target_margin_override"),
+            )
+            .on_conflict_do_nothing(index_elements=["search_query"])
+        )
+        result = await db.execute(stmt)
+        if result.rowcount:
+            inserted += 1
+        else:
+            skipped += 1
+
+    await db.commit()
+    return {"inserted": inserted, "skipped": skipped, "total_candidates": len(candidates)}
