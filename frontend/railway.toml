@@ -1,7 +1,7 @@
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
-buildArgs = { NEXT_PUBLIC_API_URL = "https://ebay-sniper-production.up.railway.app/api/v1" }
+buildArgs = { NEXT_PUBLIC_API_URL = "https://ebay-sniper-production.up.railway.app/api/v1", NEXT_PUBLIC_API_KEY = "10c4ad7157969ab89fd06f74f2da5daa00a1ce8c02cbfaf6fe3de8c2d2e820d7" }
 
 [deploy]
 healthcheckPath = "/"
