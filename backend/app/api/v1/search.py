@@ -64,9 +64,18 @@ async def preview_search(
             "suggestions":  _query_suggestions(q),
         }
 
-    avg   = averages["avg_sold_price"]
+    avg    = averages["avg_sold_price"]
     margin = settings.global_default_margin
-    
+    fee    = settings.ebay_fee_rate
+
+    # Same fee-corrected formula used by refresh_service and parts._enrich():
+    #   net_revenue   = avg_sold × (1 - ebay_fee_rate)
+    #   max_buy_price = net_revenue × (1 - target_margin)
+    # This ensures what users see in the preview matches what gets tracked.
+    net_revenue    = avg * (1 - fee)
+    max_buy_price  = round(net_revenue * (1 - margin), 2)
+    est_profit     = round(net_revenue - max_buy_price, 2)
+
     # Price distribution for the chart preview
     clean_prices = sorted([
         i["total_cost"] for i in cleaned if i.get("is_used_in_avg")
@@ -83,10 +92,11 @@ async def preview_search(
             "min": clean_prices[0]  if clean_prices else None,
             "max": clean_prices[-1] if clean_prices else None,
         },
-        # The money shot — what they should max pay
-        "max_buy_price":   round(avg * (1 - margin), 2),
+        "max_buy_price":   max_buy_price,
         "target_margin":   margin,
-        "estimated_profit_per_flip": round(avg * margin, 2),
+        "ebay_fee_rate":   fee,
+        "net_revenue":     round(net_revenue, 2),
+        "estimated_profit_per_flip": est_profit,
         # Sample of recent sold titles (for user to validate relevance)
         "recent_sold_titles": [
             {
