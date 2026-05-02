@@ -56,26 +56,34 @@ async def refresh_part(part: TrackedPart, db: AsyncSession) -> dict:
     summary["avg_sold_price"] = averages["avg_sold_price"]
 
     # ── 3. Upsert SoldListings (skip if ebay_item_id already exists) ─────────
+    # Defensive caps match the DB column widths so messy upstream data
+    # (e.g. cached scrapes from earlier parser bugs) can never crash the insert.
     inserted_count = 0
     for item in cleaned:
         if not item.get("ebay_item_id"):
             continue
-        
+
+        # Strip accessibility noise that older cache rows still contain.
+        title = item["title"]
+        for noise in ("Opens in a new window or tab", "New listing"):
+            if noise in title:
+                title = title.replace(noise, "").strip()
+
         stmt = pg_insert(SoldListing).values(
             part_id      = part.id,
-            ebay_item_id = item["ebay_item_id"],
-            title        = item["title"],
+            ebay_item_id = item["ebay_item_id"][:50],
+            title        = title,
             sold_price   = item["sold_price"],
             shipping_cost= item["shipping_cost"],
             total_cost   = item["total_cost"],
-            condition    = item["condition"],
+            condition    = (item.get("condition") or "Used")[:50],
             sold_date    = item["sold_date"],
             listing_url  = item.get("listing_url"),
             is_outlier   = item["is_outlier"],
-            outlier_reason= item.get("outlier_reason"),
+            outlier_reason= (item.get("outlier_reason") or None) and item["outlier_reason"][:100],
             is_used_in_avg= item["is_used_in_avg"],
         ).on_conflict_do_nothing(index_elements=["ebay_item_id"])
-        
+
         result = await db.execute(stmt)
         inserted_count += result.rowcount
 
