@@ -42,7 +42,7 @@ export function PartTable({ parts, onRefresh, onEdit }: PartTableProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border bg-secondary/50">
-            {["Part", "Category", "Avg Sold", "Median", "Max Buy", "Margin", "Samples", "Last Refresh", ""].map((h) => (
+            {["Part", "Category", "Avg Sold", "Median", "Max Buy", "Target", "Live Margin", "Samples", "Last Refresh", ""].map((h) => (
               <th key={h} className="px-5 py-4 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                 {h}
               </th>
@@ -83,8 +83,19 @@ export function PartTable({ parts, onRefresh, onEdit }: PartTableProps) {
               <td className="px-5 py-4 font-mono text-foreground">{formatCurrency(part.avg_sold_price)}</td>
               <td className="px-5 py-4 font-mono text-muted-foreground">{formatCurrency(part.median_sold_price)}</td>
               <td className="px-5 py-4 font-mono font-semibold text-primary">{formatCurrency(part.max_buy_price)}</td>
+              {/* Target margin — what you're aiming for */}
               <td className="px-5 py-4">
-                <span className="font-semibold text-primary">{formatPercent((part.effective_margin ?? 0.3) * 100)}</span>
+                <span className="text-muted-foreground">{formatPercent((part.effective_margin ?? 0.3) * 100)}</span>
+              </td>
+              {/* Live margin — actual avg across current deals */}
+              <td className="px-5 py-4">
+                {part.avg_deal_margin != null ? (
+                  <span className={`font-semibold ${part.avg_deal_margin >= (part.effective_margin ?? 0.3) * 100 ? "text-primary" : "text-warning"}`}>
+                    {formatPercent(part.avg_deal_margin)}
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground/40">—</span>
+                )}
               </td>
               <td className="px-5 py-4 text-muted-foreground">{part.sample_size ?? "--"}</td>
               <td className="px-5 py-4 text-xs text-muted-foreground">{timeAgo(part.last_refreshed_at)}</td>

@@ -13,6 +13,7 @@ export interface Part {
   updated_at: string | null;
   effective_margin: number | null;
   max_buy_price: number | null;
+  avg_deal_margin: number | null;
 }
 
 export interface PartCreate {
