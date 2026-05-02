@@ -36,15 +36,20 @@ async def fetch_active_listings(
         List of enriched listing dicts ready for DB insert
     """
     token = await get_access_token()
-    
+
+    # Strip control chars/whitespace defensively. httpx rejects any non-printable
+    # ASCII in URLs or headers, and search_query / env-loaded URLs have been
+    # the source of "Invalid non-printable ASCII character in URL" crashes.
+    safe_query = "".join(c for c in (search_query or "") if c.isprintable()).strip()
+    safe_url = "".join(c for c in BROWSE_API_URL if c.isprintable()).strip()
+
     headers = {
         "Authorization": f"Bearer {token}",
         "X-EBAY-C-MARKETPLACE-ID": settings.ebay_marketplace_id,
-        "X-EBAY-C-ENDUSERCTX": "affiliateCampaignId=<ePNCampaignId>",
     }
-    
+
     params = {
-        "q":           search_query,
+        "q":           safe_query,
         "sort":        "price",              # cheapest first = best deals first
         "limit":       str(MAX_ACTIVE_RESULTS),
         "filter":      _build_filters(max_buy_price),
@@ -53,11 +58,11 @@ async def fetch_active_listings(
 
     async with httpx.AsyncClient(timeout=15.0) as client:
         try:
-            response = await client.get(BROWSE_API_URL, headers=headers, params=params)
+            response = await client.get(safe_url, headers=headers, params=params)
             response.raise_for_status()
             data = response.json()
         except httpx.HTTPError as e:
-            logger.error("Browse API request failed: %s", e)
+            logger.error("Browse API request failed: %s | url=%r | q=%r", e, safe_url, safe_query)
             return []
 
     items = data.get("itemSummaries", [])
