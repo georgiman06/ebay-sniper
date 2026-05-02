@@ -167,6 +167,10 @@ async def _scrape_ebay(search_query: str, condition_filter: str) -> list[dict]:
             if not title_el: continue
             
             title = title_el.text.strip()
+            # eBay appends accessibility text to anchor labels; strip it.
+            for noise in ("Opens in a new window or tab", "New listing"):
+                if noise in title:
+                    title = title.replace(noise, "").strip()
             # Skip the hidden "Shop on eBay" placeholder
             if title.lower().startswith("shop on ebay"):
                 continue
@@ -192,9 +196,26 @@ async def _scrape_ebay(search_query: str, condition_filter: str) -> list[dict]:
                 if "free" not in shipping_text:
                     shipping_cost = parse_price(shipping_text)
                     
-            # Condition
+            # Condition. eBay's s-card__subtitle now sometimes holds promo text
+            # (e.g. seller marketing) instead of a real condition string.
+            # Detect known condition keywords; fall back to "Used" otherwise.
             cond_el = item.find(class_=lambda c: c and ("SECONDARY_INFO" in c or "s-card__subtitle" in c))
-            condition = cond_el.text.strip() if cond_el else "Used"
+            raw_cond = cond_el.text.strip() if cond_el else ""
+            cond_lower = raw_cond.lower()
+            if "open box" in cond_lower or "open-box" in cond_lower:
+                condition = "Open Box"
+            elif "refurb" in cond_lower:
+                condition = "Refurbished"
+            elif "new" in cond_lower and "like new" not in cond_lower:
+                condition = "New"
+            elif "parts" in cond_lower or "not working" in cond_lower:
+                condition = "For Parts"
+            elif "used" in cond_lower or "pre-owned" in cond_lower or "preowned" in cond_lower:
+                condition = "Used"
+            else:
+                condition = "Used"  # safe default; column is varchar(50)
+            # Defensive truncation — DB column is varchar(50)
+            condition = condition[:50]
             
             # Date
             # Usually found in: <span class="POSITIVE">Sold Feb 14, 2024</span> or <span class="s-card__title-label">
