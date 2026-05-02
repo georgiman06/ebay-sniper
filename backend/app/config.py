@@ -13,6 +13,7 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     cors_origins: str = "http://localhost:3000"
     scraperapi_key: str = ""
+    anthropic_api_key: str = ""
     global_default_margin: float = 0.30
     token_cache_buffer_seconds: int = 60
 
@@ -26,6 +27,7 @@ class Settings(BaseSettings):
         "ebay_client_id",
         "ebay_client_secret",
         "scraperapi_key",
+        "anthropic_api_key",
         mode="before",
     )
     @classmethod

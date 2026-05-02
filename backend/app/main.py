@@ -7,7 +7,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from pythonjsonlogger import jsonlogger
 from app.limiter import limiter
-from app.api.v1 import parts, refresh, listings, health, search, discovery
+from app.api.v1 import parts, refresh, listings, health, search, discovery, chat
 from app.dependencies import verify_api_key
 from app.scheduler import start_scheduler
 from app.database import engine, Base
@@ -77,6 +77,7 @@ app.include_router(refresh.router,    prefix="/api/v1", dependencies=_auth)
 app.include_router(listings.router,   prefix="/api/v1", dependencies=_auth)
 app.include_router(search.router,     prefix="/api/v1", dependencies=_auth)
 app.include_router(discovery.router,  prefix="/api/v1", dependencies=_auth)
+app.include_router(chat.router,       prefix="/api/v1", dependencies=_auth)
 
 async def _startup_refresh():
     from datetime import datetime, timezone, timedelta

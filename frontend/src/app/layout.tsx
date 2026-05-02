@@ -3,6 +3,7 @@ import "./globals.css";
 import Link from "next/link";
 import { QuotaPill } from "@/components/quota/QuotaPill";
 import { QuotaBanner } from "@/components/quota/QuotaBanner";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 
 export const metadata: Metadata = {
   title: "SNIPER - eBay Deal Finder",
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
 
         <main className="pt-[73px]">{children}</main>
+        <ChatWidget />
       </body>
     </html>
   );
