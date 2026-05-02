@@ -8,6 +8,7 @@ from playwright.async_api import async_playwright
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import settings
 from app.database import AsyncSessionLocal
 from app.models.sold_listing import ScrapedSoldListing
 
@@ -102,10 +103,25 @@ async def _scrape_ebay(search_query: str, condition_filter: str) -> list[dict]:
         cond_param = 3000
 
     encoded_query = urllib.parse.quote(search_query)
-    url = f"https://www.ebay.com/sch/i.html?_nkw={encoded_query}&LH_Sold=1&LH_Complete=1&LH_ItemCondition={cond_param}&rt=nc"
-    
+    target_url = f"https://www.ebay.com/sch/i.html?_nkw={encoded_query}&LH_Sold=1&LH_Complete=1&LH_ItemCondition={cond_param}&rt=nc"
+
+    # Route through ScraperAPI when key is configured (production / Railway).
+    # Direct navigation when unset (local dev with residential IP).
+    if settings.scraperapi_key:
+        nav_url = (
+            "http://api.scraperapi.com/?"
+            f"api_key={settings.scraperapi_key}"
+            f"&url={urllib.parse.quote(target_url, safe='')}"
+        )
+        # ScraperAPI proxies through residential IPs — slower than direct, give it room.
+        nav_timeout = 70000
+        logger.info(f"Scraper using ScraperAPI proxy for: {search_query}")
+    else:
+        nav_url = target_url
+        nav_timeout = 20000
+
     results = []
-    
+
     async with async_playwright() as p:
         # Launch chromium in headless mode
         browser = await p.chromium.launch(
@@ -116,20 +132,17 @@ async def _scrape_ebay(search_query: str, condition_filter: str) -> list[dict]:
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
-        
+
         try:
-            # Wait until DOM is loaded
-            await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-            
+            await page.goto(nav_url, wait_until="domcontentloaded", timeout=nav_timeout)
             # Additional wait just to be safe for JavaScript hydration
             await page.wait_for_timeout(2000)
-            
             html = await page.content()
         except Exception as e:
             logger.error(f"Playwright navigation failed: {e}")
             await browser.close()
             return []
-            
+
         await browser.close()
         
     soup = BeautifulSoup(html, "lxml")

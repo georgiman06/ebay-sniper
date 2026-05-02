@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     api_key: str
     sentry_dsn: str = ""
     cors_origins: str = "http://localhost:3000"
+    scraperapi_key: str = ""
     global_default_margin: float = 0.30
     token_cache_buffer_seconds: int = 60
 
