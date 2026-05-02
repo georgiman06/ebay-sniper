@@ -114,19 +114,33 @@ async def _scrape_ebay(search_query: str, condition_filter: str) -> list[dict]:
         cond_param = 3000
 
     encoded_query = urllib.parse.quote(search_query)
-    target_url = f"https://www.ebay.com/sch/i.html?_nkw={encoded_query}&LH_Sold=1&LH_Complete=1&LH_ItemCondition={cond_param}&rt=nc"
+    # _currency=USD  — force USD display regardless of proxy location
+    # LH_PrefLoc=1   — prefer US-located items (also anchors currency)
+    # _sadis=US      — shipping/display locale = US
+    target_url = (
+        f"https://www.ebay.com/sch/i.html"
+        f"?_nkw={encoded_query}"
+        f"&LH_Sold=1&LH_Complete=1"
+        f"&LH_ItemCondition={cond_param}"
+        f"&LH_PrefLoc=1"
+        f"&_currency=USD"
+        f"&_sadis=US"
+        f"&rt=nc"
+    )
 
     # Route through ScraperAPI when key is configured (production / Railway).
-    # Direct navigation when unset (local dev with residential IP).
+    # country_code=us ensures ScraperAPI routes via a US residential IP,
+    # preventing eBay from serving prices in a foreign currency (JPY/KRW etc.)
+    # which would inflate results 100-150x and bypass IQR filtering.
     if settings.scraperapi_key:
         nav_url = (
             "http://api.scraperapi.com/?"
             f"api_key={settings.scraperapi_key}"
+            f"&country_code=us"
             f"&url={urllib.parse.quote(target_url, safe='')}"
         )
-        # ScraperAPI proxies through residential IPs — slower than direct, give it room.
         nav_timeout = 70000
-        logger.info(f"Scraper using ScraperAPI proxy for: {search_query}")
+        logger.info(f"Scraper using ScraperAPI proxy (US) for: {search_query}")
     else:
         nav_url = target_url
         nav_timeout = 20000

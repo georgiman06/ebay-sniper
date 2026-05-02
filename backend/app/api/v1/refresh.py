@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from uuid import UUID
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.part import TrackedPart
+from app.models.sold_listing import ScrapedSoldListing
 from app.services.refresh_service import refresh_part, refresh_all_parts
 
 router = APIRouter(tags=["Refresh"])
@@ -53,3 +54,19 @@ async def _run_refresh_all_in_new_session():
     async with AsyncSessionLocal() as db:
         await refresh_all_parts(db)
         await db.commit()
+
+
+@router.delete("/refresh/cache")
+async def clear_scraper_cache(db: AsyncSession = Depends(get_db)):
+    """
+    Purges all Playwright scraper cache rows so the next refresh re-scrapes
+    eBay with the corrected URL params (US locale, USD currency).
+
+    Call this once after deploying the locale/currency scraper fix to
+    immediately discard any bad-currency cached data rather than waiting
+    for the 24h TTL to expire.
+    """
+    result = await db.execute(delete(ScrapedSoldListing))
+    deleted = result.rowcount
+    await db.commit()
+    return {"status": "cache_cleared", "rows_deleted": deleted}

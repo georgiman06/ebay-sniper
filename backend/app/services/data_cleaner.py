@@ -36,6 +36,14 @@ EXCLUSION_RE = re.compile("|".join(EXCLUSION_PATTERNS), re.IGNORECASE)
 # Hard floor — anything below this is almost certainly not a real sale
 ABSOLUTE_MINIMUM_PRICE = 5.0
 
+# Hard ceiling — anything above this is almost certainly wrong data.
+# The most common cause is ScraperAPI routing through a non-US IP so eBay
+# serves prices in JPY/KRW (100-150x larger than USD). IQR can't catch this
+# because the whole dataset is uniformly inflated and clusters correctly.
+# $10,000 covers high-end electronics, pro camera gear, industrial parts, etc.
+# Raise this if you need to track legitimately expensive items.
+ABSOLUTE_MAXIMUM_PRICE = 10_000.0
+
 
 def clean_listings(raw_listings: list[dict], raw_query: str = "") -> list[dict]:
     """
@@ -81,11 +89,17 @@ def clean_listings(raw_listings: list[dict], raw_query: str = "") -> list[dict]:
                 item["is_outlier"] = True
                 item["outlier_reason"] = f"failed_strict_match (missing: {', '.join(missing_tokens)})"
 
-    # Pass 2: Absolute floor
+    # Pass 2: Absolute floor and ceiling
     for item in raw_listings:
-        if not item["is_outlier"] and item["total_cost"] < ABSOLUTE_MINIMUM_PRICE:
+        if item["is_outlier"]:
+            continue
+        price = item["total_cost"]
+        if price < ABSOLUTE_MINIMUM_PRICE:
             item["is_outlier"] = True
             item["outlier_reason"] = "price_below_floor"
+        elif price > ABSOLUTE_MAXIMUM_PRICE:
+            item["is_outlier"] = True
+            item["outlier_reason"] = f"price_above_ceiling ({price:.0f} > {ABSOLUTE_MAXIMUM_PRICE:.0f})"
 
     # Pass 3: IQR on clean candidates only
     clean_prices = [
