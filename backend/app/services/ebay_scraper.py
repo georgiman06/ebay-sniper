@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import settings
 from app.database import AsyncSessionLocal
 from app.models.sold_listing import ScrapedSoldListing
+from app.services.quota_tracker import reserve, record_failure, QuotaExceededError
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +61,19 @@ async def fetch_with_cache(search_query: str, condition_filter: str = "working")
             ]
         
         logger.info(f"Scraper Cache MISS | query='{cache_key}' | Scraping eBay...")
-        
+
+        # Reserve a ScraperAPI slot only when we actually need to hit the network.
+        # Cache hits cost nothing.
+        if settings.scraperapi_key:
+            if not await reserve("scraperapi"):
+                raise QuotaExceededError("scraperapi")
+
         # Scrape
-        scraped_dicts = await _scrape_ebay(search_query, condition_filter)
+        try:
+            scraped_dicts = await _scrape_ebay(search_query, condition_filter)
+        except Exception:
+            await record_failure("scraperapi")
+            raise
         
         if not scraped_dicts:
             logger.warning(f"Scraper returned no data for query: '{cache_key}'")

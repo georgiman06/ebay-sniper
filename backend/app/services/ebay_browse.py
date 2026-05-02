@@ -10,6 +10,7 @@ import logging
 from datetime import datetime, timezone
 from app.config import settings
 from app.services.ebay_auth import get_access_token
+from app.services.quota_tracker import reserve, record_failure, QuotaExceededError
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,12 @@ async def fetch_active_listings(
     Returns:
         List of enriched listing dicts ready for DB insert
     """
+    # Reserve a quota slot before making the call. If the daily ceiling has
+    # been hit, raise so callers can surface a user-friendly 429 / skip the
+    # refresh cleanly instead of pounding the API.
+    if not await reserve("ebay_browse"):
+        raise QuotaExceededError("ebay_browse")
+
     token = await get_access_token()
 
     # Strip control chars/whitespace defensively. httpx rejects any non-printable
@@ -63,6 +70,7 @@ async def fetch_active_listings(
             data = response.json()
         except httpx.HTTPError as e:
             logger.error("Browse API request failed: %s | url=%r | q=%r", e, safe_url, safe_query)
+            await record_failure("ebay_browse")
             return []
 
     items = data.get("itemSummaries", [])

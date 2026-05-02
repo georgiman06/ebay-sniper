@@ -32,6 +32,7 @@ from app.models.part import TrackedPart
 # from app.models.active_listing import ActiveListing
 from app.models.search_history import SearchHistory
 from app.models.sold_listing import ScrapedSoldListing
+from app.models.api_usage import ApiUsage
 
 target_metadata = Base.metadata
 

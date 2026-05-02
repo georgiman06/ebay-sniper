@@ -1,7 +1,8 @@
 import asyncio
 import sentry_sdk
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from pythonjsonlogger import jsonlogger
@@ -11,6 +12,7 @@ from app.dependencies import verify_api_key
 from app.scheduler import start_scheduler
 from app.database import engine, Base
 from app.config import settings
+from app.services.quota_tracker import QuotaExceededError, SERVICES
 import logging
 
 def _configure_logging() -> None:
@@ -36,6 +38,30 @@ if settings.sentry_dsn:
 app = FastAPI(title="eBay Deal Finder", version="0.2.0")
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+
+@app.exception_handler(QuotaExceededError)
+async def _quota_exceeded_handler(request: Request, exc: QuotaExceededError):
+    """Map any in-flight QuotaExceededError to a structured 429 response.
+    Frontend's lib/api.ts surfaces this as a banner/toast instead of a generic
+    error, and the dashboard banner picks up the same details from /health/quota.
+    """
+    spec = SERVICES.get(exc.service)
+    return JSONResponse(
+        status_code=429,
+        content={
+            "status": "quota_exceeded",
+            "service": exc.service,
+            "label": exc.label,
+            "window": exc.window,
+            "message": (
+                f"{exc.label} quota reached for this "
+                f"{'month' if exc.window == 'monthly' else 'day'}. "
+                "Try again after the next reset."
+            ),
+            "limit": spec.limit if spec else None,
+        },
+    )
 
 app.add_middleware(
     CORSMiddleware,
