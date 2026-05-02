@@ -136,6 +136,17 @@ async def _scrape_ebay(search_query: str, condition_filter: str) -> list[dict]:
     
     # Each listing is an li with class s-item or s-card
     items = soup.find_all("li", class_=lambda c: c and ("s-item" in c or "s-card" in c))
+
+    # Diagnostic: if we got HTML but no items, log a snippet so we can tell
+    # whether eBay served a real results page, a bot challenge, or a sign-in wall.
+    if not items:
+        title_tag = soup.find("title")
+        page_title = title_tag.text.strip() if title_tag else "(no title)"
+        body_snippet = (soup.body.get_text(" ", strip=True)[:500] if soup.body else "")
+        logger.warning(
+            "Scraper got HTML but found 0 listings | title=%r | body_start=%r",
+            page_title, body_snippet,
+        )
     
     for item in items:
         try:

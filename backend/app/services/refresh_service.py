@@ -180,15 +180,20 @@ async def refresh_all_parts(db: AsyncSession, force: bool = False) -> list[dict]
 
     summaries = []
     for part in parts:
+        # Capture identifiers up front — after rollback the ORM expires
+        # attributes and re-loading them outside the async ctx raises MissingGreenlet.
+        part_name = part.name
+        part_id_str = str(part.id)
+
         # Skip recently refreshed parts unless forced
         if not force and part.last_refreshed_at:
             age_hours = (now - part.last_refreshed_at).total_seconds() / 3600
             if age_hours < min_age_hours:
                 logger.info(
                     "Skipping %s — refreshed %.1fh ago (min %.1fh)",
-                    part.name, age_hours, min_age_hours
+                    part_name, age_hours, min_age_hours
                 )
-                summaries.append({"part_id": str(part.id), "status": "skipped_recent"})
+                summaries.append({"part_id": part_id_str, "status": "skipped_recent"})
                 continue
 
         try:
@@ -199,7 +204,7 @@ async def refresh_all_parts(db: AsyncSession, force: bool = False) -> list[dict]
             await asyncio.sleep(1)
         except Exception as e:
             await db.rollback() # Clear the failed transaction state
-            logger.error("Refresh failed for %s: %s", part.name, e)
-            summaries.append({"part_id": str(part.id), "status": "error", "error": str(e)})
+            logger.error("Refresh failed for %s: %s", part_name, e)
+            summaries.append({"part_id": part_id_str, "status": "error", "error": str(e)})
 
     return summaries
