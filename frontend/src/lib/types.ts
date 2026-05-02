@@ -36,11 +36,15 @@ export interface PartCreate {
   category: string;
   search_query: string;
   target_margin_override?: number | null;
+  ebay_fee_override?: number | null;
+  outbound_shipping?: number | null;
 }
 
 export interface PartUpdate {
   is_active?: boolean;
   target_margin_override?: number | null;
+  ebay_fee_override?: number | null;
+  outbound_shipping?: number | null;
 }
 
 export interface ActiveListing {
