@@ -1,5 +1,7 @@
 "use client";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { classNames } from "@/lib/utils";
 import type { Message } from "@/hooks/useChat";
 
@@ -43,26 +45,37 @@ export function ChatMessage({ message }: ChatMessageProps) {
       >
         {/* Tool-use indicator */}
         {!isUser && message.toolUsed && (
-          <p className="mb-1.5 text-[11px] text-muted-foreground italic">
+          <p className="mb-1.5 flex items-center gap-1.5 text-[11px] text-muted-foreground italic">
+            <span className="inline-block h-1 w-1 animate-pulse rounded-full bg-primary" />
             {TOOL_LABELS[message.toolUsed] ?? `Calling ${message.toolUsed}…`}
           </p>
         )}
 
         {/* Content */}
         {message.content ? (
-          <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          isUser ? (
+            // User messages: plain text, no markdown (they don't write markdown)
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          ) : (
+            // Assistant messages: full markdown rendering
+            <div className="chat-markdown">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {message.content}
+              </ReactMarkdown>
+              {/* Streaming cursor — appended after last rendered character */}
+              {message.isStreaming && (
+                <span className="ml-0.5 inline-block h-3.5 w-0.5 animate-pulse bg-primary align-middle" />
+              )}
+            </div>
+          )
         ) : message.isStreaming && !message.toolUsed ? (
+          // Thinking dots before first token arrives
           <span className="inline-flex items-center gap-1 text-muted-foreground">
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]" />
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]" />
             <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground" />
           </span>
         ) : null}
-
-        {/* Streaming cursor */}
-        {!isUser && message.isStreaming && message.content && (
-          <span className="ml-0.5 inline-block h-3.5 w-0.5 animate-pulse bg-primary align-middle" />
-        )}
       </div>
     </div>
   );
