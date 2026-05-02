@@ -2,8 +2,8 @@
 import { useState } from "react";
 import { Part, FeeBreakdown } from "@/lib/types";
 import { formatCurrency, formatPercent, timeAgo, classNames } from "@/lib/utils";
-import { Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, ExternalLink, Info } from "lucide-react";
-import { deletePart, updatePart, refreshPart } from "@/lib/api";
+import { Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, ExternalLink, Info, DatabaseZap } from "lucide-react";
+import { deletePart, updatePart, refreshPart, deepFetchPart } from "@/lib/api";
 import Link from "next/link";
 
 interface PartTableProps {
@@ -34,6 +34,13 @@ export function PartTable({ parts, onRefresh, onEdit }: PartTableProps) {
     setLoadingId(id);
     await refreshPart(id);
     setTimeout(onRefresh, 3000);
+    setLoadingId(null);
+  }
+
+  async function handleDeepFetch(id: string) {
+    setLoadingId(id);
+    await deepFetchPart(id);
+    setTimeout(onRefresh, 5000);
     setLoadingId(null);
   }
 
@@ -99,7 +106,9 @@ export function PartTable({ parts, onRefresh, onEdit }: PartTableProps) {
                   <span className="text-muted-foreground/40">—</span>
                 )}
               </td>
-              <td className="px-5 py-4 text-muted-foreground">{part.sample_size ?? "--"}</td>
+              <td className="px-5 py-4">
+                <ConfidenceBadge count={part.sample_size} />
+              </td>
               <td className="px-5 py-4 text-xs text-muted-foreground">{timeAgo(part.last_refreshed_at)}</td>
               <td className="px-5 py-4">
                 <div className="flex items-center gap-1.5">
@@ -116,10 +125,19 @@ export function PartTable({ parts, onRefresh, onEdit }: PartTableProps) {
                     id={`refresh-${part.id}`}
                     onClick={() => handleRefresh(part.id)}
                     disabled={loadingId === part.id}
-                    title="Refresh pricing"
+                    title="Quick refresh (uses cache)"
                     hoverColor="text-blue-400"
                   >
                     <RefreshCw className={classNames("h-3.5 w-3.5", loadingId === part.id && "animate-spin")} />
+                  </ActionButton>
+                  <ActionButton
+                    id={`deep-${part.id}`}
+                    onClick={() => handleDeepFetch(part.id)}
+                    disabled={loadingId === part.id}
+                    title="Deep fetch — clears cache, pulls 300 comps from Finding API + fresh scrape (use when sample count is low)"
+                    hoverColor="text-purple-400"
+                  >
+                    <DatabaseZap className="h-3.5 w-3.5" />
                   </ActionButton>
                   <ActionButton
                     id={`edit-${part.id}`}
@@ -145,6 +163,28 @@ export function PartTable({ parts, onRefresh, onEdit }: PartTableProps) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function ConfidenceBadge({ count }: { count: number | null }) {
+  if (count == null) return <span className="text-muted-foreground/40">—</span>;
+
+  const { label, color, bg, title } =
+    count >= 60
+      ? { label: `${count} comps`, color: "text-primary",          bg: "bg-primary/10",  title: "High confidence — strong statistical base" }
+      : count >= 30
+      ? { label: `${count} comps`, color: "text-blue-400",         bg: "bg-blue-400/10", title: "Moderate confidence — reliable average" }
+      : count >= 10
+      ? { label: `${count} comps`, color: "text-warning",          bg: "bg-warning/10",  title: "Limited data — use with caution" }
+      : { label: `${count} comp${count === 1 ? "" : "s"}`, color: "text-danger", bg: "bg-danger/10", title: "Low confidence — not enough data for reliable pricing" };
+
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold ${color} ${bg}`}
+    >
+      {label}
+    </span>
   );
 }
 

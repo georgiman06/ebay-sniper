@@ -46,6 +46,9 @@ export const getPriceHistory = (partId: string, cleanOnly = true) =>
 export const refreshPart = (id: string) =>
   req<{ status: string; part_id: string }>(`/refresh/${id}`, { method: "POST" });
 
+export const deepFetchPart = (id: string) =>
+  req<{ status: string; part_id: string }>(`/refresh/${id}/deep`, { method: "POST" });
+
 export const refreshAll = () =>
   req<{ status: string }>("/refresh/all", { method: "POST" });
 

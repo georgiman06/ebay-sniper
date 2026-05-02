@@ -56,6 +56,36 @@ async def _run_refresh_all_in_new_session():
         await db.commit()
 
 
+@router.post("/refresh/{part_id}/deep")
+async def deep_fetch_part(
+    part_id: UUID,
+    background_tasks: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Deep historical fetch for a single part.
+    Clears that part's scrape cache first so Playwright re-scrapes fresh,
+    then runs a full refresh pulling from both Finding API (300 results,
+    90 days) and Playwright (50-60 most recent). Gives the IQR cleaner
+    the maximum possible dataset for accurate pricing.
+    """
+    result = await db.execute(select(TrackedPart).where(TrackedPart.id == part_id))
+    part = result.scalar_one_or_none()
+    if not part:
+        raise HTTPException(status_code=404, detail="Part not found")
+
+    # Clear the scrape cache for this part's query so Playwright re-hits eBay
+    await db.execute(
+        delete(ScrapedSoldListing).where(
+            ScrapedSoldListing.search_query.contains(part.search_query)
+        )
+    )
+    await db.commit()
+
+    background_tasks.add_task(_run_refresh_in_new_session, str(part_id))
+    return {"status": "deep_fetch_queued", "part_id": str(part_id)}
+
+
 @router.delete("/refresh/cache")
 async def clear_scraper_cache(db: AsyncSession = Depends(get_db)):
     """
