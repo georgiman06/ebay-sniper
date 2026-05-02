@@ -49,6 +49,9 @@ export const refreshPart = (id: string) =>
 export const refreshAll = () =>
   req<{ status: string }>("/refresh/all", { method: "POST" });
 
+export const clearScrapeCache = () =>
+  req<{ status: string; rows_deleted: number }>("/refresh/cache", { method: "DELETE" });
+
 // ── Search & Discover ────────────────────────────────────────────────────────
 export interface SearchPreviewResult {
   query: string;
