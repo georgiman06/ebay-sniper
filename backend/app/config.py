@@ -16,6 +16,27 @@ class Settings(BaseSettings):
     global_default_margin: float = 0.30
     token_cache_buffer_seconds: int = 60
 
+    @field_validator(
+        "ebay_auth_url",
+        "ebay_browse_api_url",
+        "ebay_finding_api_url",
+        "database_url",
+        "cors_origins",
+        "api_key",
+        "ebay_client_id",
+        "ebay_client_secret",
+        "scraperapi_key",
+        mode="before",
+    )
+    @classmethod
+    def strip_control_chars(cls, v):
+        # Railway env vars sometimes ship with trailing whitespace / hidden
+        # control chars that crash httpx ("Invalid non-printable ASCII").
+        # Strip everything non-printable from secrets and URLs at load time.
+        if not isinstance(v, str):
+            return v
+        return "".join(c for c in v if c.isprintable()).strip()
+
     @field_validator("database_url")
     @classmethod
     def fix_db_scheme(cls, v: str) -> str:
