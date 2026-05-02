@@ -15,6 +15,8 @@ class Settings(BaseSettings):
     scraperapi_key: str = ""
     anthropic_api_key: str = ""
     global_default_margin: float = 0.30
+    ebay_fee_rate: float = 0.1325       # 13.25% standard final value fee
+    outbound_shipping_default: float = 0.0  # assume free shipping unless overridden
     token_cache_buffer_seconds: int = 60
 
     @field_validator(

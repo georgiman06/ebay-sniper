@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
-import { Part } from "@/lib/types";
+import { Part, FeeBreakdown } from "@/lib/types";
 import { formatCurrency, formatPercent, timeAgo, classNames } from "@/lib/utils";
-import { Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, ExternalLink } from "lucide-react";
+import { Pencil, Trash2, RefreshCw, ToggleLeft, ToggleRight, ExternalLink, Info } from "lucide-react";
 import { deletePart, updatePart, refreshPart } from "@/lib/api";
 import Link from "next/link";
 
@@ -82,7 +82,9 @@ export function PartTable({ parts, onRefresh, onEdit }: PartTableProps) {
               </td>
               <td className="px-5 py-4 font-mono text-foreground">{formatCurrency(part.avg_sold_price)}</td>
               <td className="px-5 py-4 font-mono text-muted-foreground">{formatCurrency(part.median_sold_price)}</td>
-              <td className="px-5 py-4 font-mono font-semibold text-primary">{formatCurrency(part.max_buy_price)}</td>
+              <td className="px-5 py-4">
+                <MaxBuyCell part={part} />
+              </td>
               {/* Target margin — what you're aiming for */}
               <td className="px-5 py-4">
                 <span className="text-muted-foreground">{formatPercent((part.effective_margin ?? 0.3) * 100)}</span>
@@ -142,6 +144,60 @@ export function PartTable({ parts, onRefresh, onEdit }: PartTableProps) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+function MaxBuyCell({ part }: { part: Part }) {
+  const [show, setShow] = useState(false);
+  const b = part.fee_breakdown;
+
+  return (
+    <div className="relative inline-flex items-center gap-1.5">
+      <span className="font-mono font-semibold text-primary">
+        {formatCurrency(part.max_buy_price)}
+      </span>
+      {b && (
+        <button
+          type="button"
+          onMouseEnter={() => setShow(true)}
+          onMouseLeave={() => setShow(false)}
+          onClick={() => setShow((v) => !v)}
+          className="text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+          aria-label="Show price breakdown"
+        >
+          <Info className="h-3.5 w-3.5" />
+        </button>
+      )}
+      {show && b && (
+        <div className="absolute bottom-full left-0 z-30 mb-2 w-56 rounded-xl border border-border bg-card p-3 shadow-xl text-[11px] space-y-1.5">
+          <p className="font-semibold text-foreground text-[10px] uppercase tracking-wide mb-2">
+            Max Buy Breakdown
+          </p>
+          <Row label="Avg sold price"      value={formatCurrency(b.gross_revenue)} />
+          <Row label={`eBay fee (${b.ebay_fee_rate}%)`} value={`− ${formatCurrency(b.ebay_fee_amt)}`} muted />
+          {b.outbound_ship > 0 && (
+            <Row label="Outbound shipping" value={`− ${formatCurrency(b.outbound_ship)}`} muted />
+          )}
+          <div className="border-t border-border my-1" />
+          <Row label="Net revenue"         value={formatCurrency(b.net_revenue)} bold />
+          <Row label={`× (1 − ${b.target_margin}% margin)`} value="" muted />
+          <div className="border-t border-border my-1" />
+          <Row label="Max buy price"       value={formatCurrency(b.max_buy_price)} green />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value, muted, bold, green }: { label: string; value: string; muted?: boolean; bold?: boolean; green?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className={muted ? "text-muted-foreground" : "text-foreground"}>{label}</span>
+      <span className={classNames(
+        "tabular-nums",
+        green ? "font-semibold text-primary" : bold ? "font-semibold text-foreground" : "text-muted-foreground"
+      )}>{value}</span>
     </div>
   );
 }

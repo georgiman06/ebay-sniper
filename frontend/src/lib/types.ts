@@ -1,3 +1,13 @@
+export interface FeeBreakdown {
+  gross_revenue: number;
+  ebay_fee_rate: number;
+  ebay_fee_amt: number;
+  outbound_ship: number;
+  net_revenue: number;
+  target_margin: number;
+  max_buy_price: number;
+}
+
 export interface Part {
   id: string;
   name: string;
@@ -5,6 +15,8 @@ export interface Part {
   search_query: string;
   is_active: boolean;
   target_margin_override: number | null;
+  ebay_fee_override: number | null;
+  outbound_shipping: number | null;
   avg_sold_price: number | null;
   median_sold_price: number | null;
   sample_size: number | null;
@@ -12,7 +24,10 @@ export interface Part {
   created_at: string;
   updated_at: string | null;
   effective_margin: number | null;
+  effective_fee: number | null;
+  effective_shipping: number | null;
   max_buy_price: number | null;
+  fee_breakdown: FeeBreakdown | null;
   avg_deal_margin: number | null;
 }
 

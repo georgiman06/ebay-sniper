@@ -16,8 +16,10 @@ class TrackedPart(Base):
                                                                     # e.g. '(RTX 3080) -"for parts" -broken -faulty'
     is_active       = Column(Boolean, default=True, nullable=False)
     
-    # Per-part margin override (NULL means use global setting)
-    target_margin_override = Column(Float, nullable=True)          # e.g. 0.30 = 30%
+    # Per-part overrides (NULL → fall back to global settings)
+    target_margin_override  = Column(Float, nullable=True)  # e.g. 0.30 = 30%
+    ebay_fee_override       = Column(Float, nullable=True)  # e.g. 0.12 for Tools category
+    outbound_shipping       = Column(Float, nullable=True)  # estimated cost to ship item out
 
     # Computed/cached fields — updated each refresh cycle
     avg_sold_price      = Column(Float, nullable=True)             # Rolling 30-day average

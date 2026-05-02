@@ -118,15 +118,32 @@ async def refresh_part(part: TrackedPart, db: AsyncSession) -> dict:
     db.add(part)
 
     # ── 5. Compute Max Buy Price ──────────────────────────────────────────────
+    # Correct formula accounts for eBay's final value fee and any outbound
+    # shipping cost before applying the target margin:
+    #   net_revenue   = avg_sold × (1 - fee_rate) - outbound_shipping
+    #   max_buy_price = net_revenue × (1 - target_margin)
     target_margin = (
         part.target_margin_override
         if part.target_margin_override is not None
         else settings.global_default_margin
     )
+    effective_fee = (
+        part.ebay_fee_override
+        if part.ebay_fee_override is not None
+        else settings.ebay_fee_rate
+    )
+    effective_shipping = (
+        part.outbound_shipping
+        if part.outbound_shipping is not None
+        else settings.outbound_shipping_default
+    )
 
-    max_buy_price = round(avg_price * (1 - target_margin), 2)
-    summary["max_buy_price"] = max_buy_price
-    summary["target_margin"] = target_margin
+    net_revenue   = avg_price * (1 - effective_fee) - effective_shipping
+    max_buy_price = round(net_revenue * (1 - target_margin), 2)
+    summary["max_buy_price"]    = max_buy_price
+    summary["target_margin"]    = target_margin
+    summary["effective_fee"]    = effective_fee
+    summary["net_revenue"]      = round(net_revenue, 2)
 
     # ── 6. Fetch Active Listings ──────────────────────────────────────────────
     active_raw = await fetch_active_listings(

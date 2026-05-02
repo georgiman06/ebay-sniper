@@ -67,15 +67,39 @@ async def _enrich(part: TrackedPart, db: AsyncSession) -> dict:
         if part.target_margin_override is not None
         else settings.global_default_margin
     )
-    max_buy_price = (
-        round(part.avg_sold_price * (1 - effective_margin), 2)
-        if part.avg_sold_price
-        else None
+    effective_fee = (
+        part.ebay_fee_override
+        if part.ebay_fee_override is not None
+        else settings.ebay_fee_rate
+    )
+    effective_shipping = (
+        part.outbound_shipping
+        if part.outbound_shipping is not None
+        else settings.outbound_shipping_default
     )
 
-    # Average actual margin across live deals for this part.
-    # Only considers listings where is_deal=True so we're showing
-    # the real margin being achieved, not near-misses.
+    # Correct formula: account for eBay's cut and outbound shipping
+    # before applying the target margin.
+    #   net_revenue   = avg_sold × (1 - fee_rate) - outbound_shipping
+    #   max_buy_price = net_revenue × (1 - target_margin)
+    max_buy_price = None
+    fee_breakdown = None
+    if part.avg_sold_price:
+        avg = part.avg_sold_price
+        ebay_fee_amt = round(avg * effective_fee, 2)
+        net_revenue = round(avg - ebay_fee_amt - effective_shipping, 2)
+        max_buy_price = round(net_revenue * (1 - effective_margin), 2)
+        fee_breakdown = {
+            "gross_revenue":   round(avg, 2),
+            "ebay_fee_rate":   round(effective_fee * 100, 2),
+            "ebay_fee_amt":    ebay_fee_amt,
+            "outbound_ship":   round(effective_shipping, 2),
+            "net_revenue":     net_revenue,
+            "target_margin":   round(effective_margin * 100, 1),
+            "max_buy_price":   max_buy_price,
+        }
+
+    # Average actual margin across live deals (deals only, not near-misses).
     margin_result = await db.execute(
         select(func.avg(ActiveListing.margin_pct)).where(
             ActiveListing.part_id == part.id,
@@ -87,7 +111,10 @@ async def _enrich(part: TrackedPart, db: AsyncSession) -> dict:
     avg_deal_margin = round(float(raw_avg), 1) if raw_avg is not None else None
 
     data = {c.name: getattr(part, c.name) for c in part.__table__.columns}
-    data["effective_margin"] = effective_margin
-    data["max_buy_price"] = max_buy_price
-    data["avg_deal_margin"] = avg_deal_margin
+    data["effective_margin"]  = effective_margin
+    data["effective_fee"]     = effective_fee
+    data["effective_shipping"]= effective_shipping
+    data["max_buy_price"]     = max_buy_price
+    data["fee_breakdown"]     = fee_breakdown
+    data["avg_deal_margin"]   = avg_deal_margin
     return data
