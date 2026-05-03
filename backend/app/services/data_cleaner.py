@@ -36,6 +36,34 @@ EXCLUSION_RE = re.compile("|".join(EXCLUSION_PATTERNS), re.IGNORECASE)
 # Hard floor — anything below this is almost certainly not a real sale
 ABSOLUTE_MINIMUM_PRICE = 5.0
 
+# Upgrade variant suffixes — when one of these appears immediately after a
+# model number in a title but was NOT in the original query, the listing is
+# a premium variant (e.g. RTX 3080 Ti when searching "rtx 3080") and should
+# be excluded. The regex requires the number immediately before the suffix so
+# "Super Flower PSU" or "Context" don't trigger false positives.
+UPGRADE_VARIANT_RE = re.compile(
+    r'\b(\d{3,5})\s*(ti\s+super|ti|super|xtx|xt|gre|x3d|ks)\b',
+    re.IGNORECASE,
+)
+
+
+def _is_wrong_variant(title: str, query_lower: str) -> str | None:
+    """
+    Returns the variant suffix if the title contains a premium variant that
+    was NOT specified in the original query. Returns None if clean.
+
+    Examples:
+      query="rtx 3080", title="RTX 3080 Ti 12GB"  → "ti"   (flag it)
+      query="rtx 3080 ti", title="RTX 3080 Ti"    → None   (user wanted Ti)
+      query="ryzen 5900x", title="Ryzen 9 5900X3D"→ "x3d"  (flag it)
+    """
+    for m in UPGRADE_VARIANT_RE.finditer(title):
+        suffix = m.group(2).lower().strip()
+        # Normalise "ti super" → check for both tokens
+        if suffix not in query_lower:
+            return suffix
+    return None
+
 # Hard ceiling — anything above this is almost certainly wrong data.
 # The most common cause is ScraperAPI routing through a non-US IP so eBay
 # serves prices in JPY/KRW (100-150x larger than USD). IQR can't catch this
@@ -88,6 +116,19 @@ def clean_listings(raw_listings: list[dict], raw_query: str = "") -> list[dict]:
             if missing_tokens:
                 item["is_outlier"] = True
                 item["outlier_reason"] = f"failed_strict_match (missing: {', '.join(missing_tokens)})"
+
+    # Pass 1.5: Variant guard — reject premium variants not in the query.
+    # Must run after strict matching (so we already know the item contains
+    # the right base model) but before IQR (so inflated Ti/Super prices
+    # don't shift the IQR bounds upward).
+    query_lower_str = " ".join(query_tokens)
+    for item in raw_listings:
+        if item["is_outlier"]:
+            continue
+        variant = _is_wrong_variant(item.get("title", ""), query_lower_str)
+        if variant:
+            item["is_outlier"] = True
+            item["outlier_reason"] = f"wrong_variant ({variant})"
 
     # Pass 2: Absolute floor and ceiling
     for item in raw_listings:

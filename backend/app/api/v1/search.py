@@ -232,24 +232,62 @@ async def record_search_event(
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+import re as _re
+
+# Variant suffixes that indicate a premium product SKU.
+# Used to auto-exclude them from the eBay query when not already specified.
+_VARIANT_SUFFIXES = ["Ti", "Super", "Ti Super", "XT", "XTX", "GRE", "X3D", "KS"]
+_MODEL_NUMBER_RE  = _re.compile(r'\b(\d{3,5})\b')
+
+
+def _variant_exclusions(base: str) -> str:
+    """
+    If the query contains a numeric model (e.g. '3080') but does NOT already
+    specify a variant suffix, auto-append eBay minus-filters so eBay itself
+    excludes the premium variants before results are fetched. This saves
+    ScraperAPI credits and reduces variant contamination at the source.
+
+    Examples:
+      "rtx 3080"     → appends: -"3080 Ti" -"3080 Super" -"3080 XT" ...
+      "rtx 3080 ti"  → no exclusions (Ti is the target, keep it)
+      "rtx"          → no model number found, no exclusions
+    """
+    model_match = _MODEL_NUMBER_RE.search(base)
+    if not model_match:
+        return ""
+
+    model_num = model_match.group(1)
+    base_lower = base.lower()
+
+    exclusions = []
+    for suffix in _VARIANT_SUFFIXES:
+        if suffix.lower() not in base_lower:
+            exclusions.append(f'-"{model_num} {suffix}"')
+
+    return " ".join(exclusions)
+
+
 def _build_clean_query(raw: str, condition: str = "working") -> str:
     """
     Converts a user's raw input into a clean eBay search query.
-    Adds standard exclusions to maximize data quality.
+    Adds standard exclusions (damage/bulk) + variant exclusions (Ti/Super/XT)
+    to maximise data quality for PC parts pricing.
     """
     base = raw.strip()
-    
-    # Don't double-add exclusions if user already put them in custom
+
+    # Don't double-add exclusions if user already put them in
     if "-" in base:
         return base
-        
+
     if condition.lower() == "parts":
-        return f"{base}" # LH_ItemCondition=7000 takes care of it, maybe add "parts" but base is fine
+        return base
     elif condition.lower() == "new":
-        return f"{base}" # LH_ItemCondition=1000 takes care of it
+        return base
     else:
-        exclusions = '-"for parts" -broken -faulty -lot -bundle -damaged -untested'
-        return f"{base} used {exclusions}"
+        damage_exclusions  = '-"for parts" -broken -faulty -lot -bundle -damaged -untested'
+        variant_exclusions = _variant_exclusions(base)
+        parts = filter(None, [f"{base} used", damage_exclusions, variant_exclusions])
+        return " ".join(parts)
 
 
 def _query_suggestions(q: str) -> list[str]:
